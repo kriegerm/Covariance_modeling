@@ -70,6 +70,8 @@ def annotatecmresults(outputfromsearch, gff3_reformatted, GenomesFASTA, outputfi
 
         #Adding in the FASTA sequence of each hit to the record using BioPython
         FASTAseq = []
+        description_lst = []
+
 
         if GenomesFASTA == "PASS":
             FASTAseq.append("No FASTA provided")
@@ -84,6 +86,7 @@ def annotatecmresults(outputfromsearch, gff3_reformatted, GenomesFASTA, outputfi
                         start = int(startlist[value])
                         end = int(endlist[value])
                     description = seq_record.description
+                    description_lst.append(description)
                     coordinates = str(start) + ".." + str(end)
 
                     if start > end:
@@ -111,10 +114,10 @@ def annotatecmresults(outputfromsearch, gff3_reformatted, GenomesFASTA, outputfi
                 FASTAseq_updated.append(entry)
 
         #Lets turn this into a pandas dataframe
-        data = [genomenameslist,middlecoordinatelist,strandlist, startlist, endlist, FASTAseq_updated]
+        data = [genomenameslist,middlecoordinatelist,strandlist, startlist, endlist, FASTAseq_updated, description_lst]
         cmresults_df = pd.DataFrame(data)
         cmresults_df = cmresults_df.transpose()
-        cmresults_df.columns = (['Genome', "Mid_Coordinate", "Strand", "Start", "End", "FASTAseq"])
+        cmresults_df.columns = (['Genome', "Mid_Coordinate", "Strand", "Start", "End", "FASTAseq", "Description"])
 
 
 ##2) Lets open the pre-formatted db as a pandas df
@@ -134,6 +137,7 @@ def annotatecmresults(outputfromsearch, gff3_reformatted, GenomesFASTA, outputfi
         hit_start = cmresults_df.iloc[value, 3]
         hit_end = cmresults_df.iloc[value, 4]
         hit_fasta = cmresults_df.iloc[value, 5]
+        genome_description = cmresults_df.iloc[value, 6]
 
         selected_genome_db_df = genome_db_df[genome_db_df["Genome"]== genome_name] #Selecting out the rows from the bigger db file that have the same names as the
         selected_genome_db_df_len = len(selected_genome_db_df)
@@ -152,20 +156,20 @@ def annotatecmresults(outputfromsearch, gff3_reformatted, GenomesFASTA, outputfi
                 Product = selected_genome_db_df.iloc[row, 7]
 
                 #I want to note if the hit and the gene are on the same strand, or opposite
-                if FeatureType == "IGR":
-                    Strand_match = str("Hit within IGR")
+                if str(FeatureType) == "IGR":
+                    Strand_match = str("IGR")
 
-                if Strand == "+" and hit_strand == "+":
-                    Strand_match = str("On the same strand as gene")
+                if str(Strand) == "-" and str(hit_strand) == "plus":
+                    Strand_match = str("Opposite")
 
-                if Strand == "-" and hit_strand == "-":
-                    Strand_match = str("On the same strand as gene")
+                if str(Strand) == "+" and str(hit_strand) == "minus":
+                    Strand_match = str("Opposite")
 
-                if Strand == "+" and hit_strand == "-":
-                    Strand_match = str("On the opposite strand as gene")
+                if str(Strand) == "+" and str(hit_strand) == "plus":
+                    Strand_match = str("Same")
 
-                if Strand == "-" and hit_strand == "+":
-                    Strand_match = str("On the opposite strand as gene")
+                if str(Strand) == "-" and str(hit_strand) == "minus":
+                    Strand_match = str("Same")
 
                 #Gene left
                 left_gene = int(row -1) #I don't think we need to worry about the first entry (and last for the right gene), becuase the genome is circular. So the -1 entry is the last entry, which is fine.
@@ -214,7 +218,7 @@ def annotatecmresults(outputfromsearch, gff3_reformatted, GenomesFASTA, outputfi
 
                 #This new_row variable is where we're going to put all the info that we want to annotate into the final results!
                 new_row = pd.DataFrame({
-                "Genome":[Genome],
+                "Genome":[Genome],"Description":[genome_description],
 
                 "left_gene_Gene":[left_gene_Gene], "left_gene_FeatureType":[left_gene_FeatureType], "left_gene_Strand":[left_gene_Strand],
                 "left_gene_Start":[left_gene_Start], "left_gene_End":[left_gene_End], "left_gene_Locus_tag":[left_gene_Locus_tag], "left_gene_Product":[left_gene_Product],
